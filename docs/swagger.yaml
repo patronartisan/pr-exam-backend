@@ -1,0 +1,774 @@
+openapi: 3.0.3
+info:
+  title: PTEST
+  version: 1.0.0
+  description: |
+    API for managing property agents, rental properties, family-based tenants,
+    property notes, and operational reminders.
+
+    Core rules:
+    1. One agent can manage multiple properties.
+    2. Each property can have only one family household.
+    3. A family can contain multiple tenants.
+    4. Notes and reminders are authored by an agent for a property.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+tags:
+  - name: Auth
+    description: Authentication and current-user endpoints
+  - name: Agents
+    description: Agent management
+  - name: Properties
+    description: Property and household management
+  - name: Notes
+    description: Property note operations
+  - name: Reminders
+    description: Property reminder operations
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      security: []
+      tags: [Auth]
+      summary: Register a user
+      description: Creates a new auth user and returns a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+
+  /auth/login:
+    post:
+      security: []
+      tags: [Auth]
+      summary: Login user
+      description: Authenticates a user and returns a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      description: Returns the currently authenticated user from the bearer token.
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /api/agents:
+    get:
+      tags: [Agents]
+      summary: List all agents
+      description: Returns agents with aggregate counts of related entities.
+      responses:
+        "200":
+          description: Agent list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgentWithCounts"
+    post:
+      tags: [Agents]
+      summary: Create an agent
+      description: Creates a new property agent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAgentRequest"
+      responses:
+        "201":
+          description: Agent created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/agents/{agentId}:
+    get:
+      tags: [Agents]
+      summary: Get one agent
+      description: Returns one agent with nested properties, family, tenants, notes, and reminders.
+      parameters:
+        - $ref: "#/components/parameters/AgentId"
+      responses:
+        "200":
+          description: Agent detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentDetail"
+        "400":
+          $ref: "#/components/responses/InvalidIdError"
+        "404":
+          $ref: "#/components/responses/AgentNotFound"
+    delete:
+      tags: [Agents]
+      summary: Delete one agent
+      description: Deletes an agent by ID and removes related properties, family households, tenants, notes, and reminders.
+      parameters:
+        - $ref: "#/components/parameters/AgentId"
+      responses:
+        "204":
+          description: Agent deleted
+        "400":
+          $ref: "#/components/responses/InvalidIdError"
+        "404":
+          $ref: "#/components/responses/AgentNotFound"
+
+  /api/properties:
+    get:
+      tags: [Properties]
+      summary: List all properties
+      description: Returns properties with full context for agent, household, notes, and reminders.
+      responses:
+        "200":
+          description: Property list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PropertyDetail"
+    post:
+      tags: [Properties]
+      summary: Create a property
+      description: Creates a property under an existing agent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePropertyRequest"
+      responses:
+        "201":
+          description: Property created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/AgentNotFound"
+
+  /api/properties/{propertyId}:
+    get:
+      tags: [Properties]
+      summary: Get one property
+      description: Returns one property with agent, family and tenants, notes, and reminders.
+      parameters:
+        - $ref: "#/components/parameters/PropertyId"
+      responses:
+        "200":
+          description: Property detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyDetail"
+        "400":
+          $ref: "#/components/responses/InvalidIdError"
+        "404":
+          $ref: "#/components/responses/PropertyNotFound"
+
+  /api/properties/{propertyId}/family:
+    post:
+      tags: [Properties]
+      summary: Assign family to property
+      description: Creates the household record. Fails if the property already has a family.
+      parameters:
+        - $ref: "#/components/parameters/PropertyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFamilyRequest"
+      responses:
+        "201":
+          description: Family assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Family"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/PropertyNotFound"
+        "409":
+          description: Property already has a family assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+
+  /api/families/{familyId}/tenants:
+    post:
+      tags: [Properties]
+      summary: Add tenant to family
+      description: Adds a tenant profile into the selected family household.
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTenantRequest"
+      responses:
+        "201":
+          description: Tenant created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/FamilyNotFound"
+
+  /api/properties/{propertyId}/notes:
+    post:
+      tags: [Notes]
+      summary: Create property note
+      description: Creates an agent-authored note for a property.
+      parameters:
+        - $ref: "#/components/parameters/PropertyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteRequest"
+      responses:
+        "201":
+          description: Note created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyNote"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          description: Agent or property not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+
+  /api/properties/{propertyId}/reminders:
+    post:
+      tags: [Reminders]
+      summary: Create property reminder
+      description: Creates a due-date reminder for a property.
+      parameters:
+        - $ref: "#/components/parameters/PropertyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReminderRequest"
+      responses:
+        "201":
+          description: Reminder created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyReminder"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          description: Agent or property not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+
+  /api/reminders/{reminderId}/status:
+    patch:
+      tags: [Reminders]
+      summary: Update reminder status
+      description: Updates reminder lifecycle state to PENDING, DONE, or CANCELED.
+      parameters:
+        - $ref: "#/components/parameters/ReminderId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReminderStatusRequest"
+      responses:
+        "200":
+          description: Reminder updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyReminder"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/ReminderNotFound"
+
+  /api/notes/{noteId}/status:
+    patch:
+      tags: [Notes]
+      summary: Update note status
+      description: Updates note lifecycle state to PENDING, DONE, or CANCELED.
+      parameters:
+        - $ref: "#/components/parameters/NoteId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNoteStatusRequest"
+      responses:
+        "200":
+          description: Note updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyNote"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NoteNotFound"
+
+components:
+  parameters:
+    AgentId:
+      name: agentId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Positive integer identifier of an agent
+    PropertyId:
+      name: propertyId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Positive integer identifier of a property
+    FamilyId:
+      name: familyId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Positive integer identifier of a family
+    ReminderId:
+      name: reminderId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Positive integer identifier of a reminder
+    NoteId:
+      name: noteId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Positive integer identifier of a note
+
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    InvalidIdError:
+      description: Path ID must be a positive integer
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    AgentNotFound:
+      description: Agent not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    PropertyNotFound:
+      description: Property not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    FamilyNotFound:
+      description: Family not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    ReminderNotFound:
+      description: Reminder not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    NoteNotFound:
+      description: Note not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    UnauthorizedError:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    ConflictError:
+      description: Request conflicts with current resource state
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Enter only the JWT token value (without the `Bearer ` prefix).
+
+  schemas:
+    AuthUser:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        fullName: { type: string, example: Admin User }
+        email: { type: string, format: email, example: admin@pureagent.local }
+      required: [id, fullName, email]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          { type: string, example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... }
+        user:
+          $ref: "#/components/schemas/AuthUser"
+      required: [token, user]
+
+    RegisterRequest:
+      type: object
+      properties:
+        fullName: { type: string, minLength: 1 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+      required: [fullName, email, password]
+
+    LoginRequest:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1 }
+      required: [email, password]
+
+    ErrorMessage:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    ReminderStatus:
+      type: string
+      enum: [PENDING, DONE, CANCELED]
+
+    NoteStatus:
+      type: string
+      enum: [PENDING, DONE, CANCELED]
+
+    Agent:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        firstName: { type: string, example: Jordan }
+        lastName: { type: string, example: Blake }
+        email: { type: string, format: email, example: jordan@agency.com }
+        mobileNumber: { type: string, nullable: true, example: "+1-555-2000" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, firstName, lastName, email, createdAt, updatedAt]
+
+    AgentWithCounts:
+      allOf:
+        - $ref: "#/components/schemas/Agent"
+        - type: object
+          properties:
+            _count:
+              type: object
+              properties:
+                properties: { type: integer, example: 2 }
+                notes: { type: integer, example: 5 }
+                reminders: { type: integer, example: 3 }
+              required: [properties, notes, reminders]
+
+    Property:
+      type: object
+      properties:
+        id: { type: integer, example: 10 }
+        agentId: { type: integer, example: 1 }
+        label: { type: string, example: Maple Residency }
+        addressLine: { type: string, example: 12 Maple Street }
+        city: { type: string, example: Austin }
+        state: { type: string, example: TX }
+        postalCode: { type: string, example: "78701" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [
+          id,
+          agentId,
+          label,
+          addressLine,
+          city,
+          state,
+          postalCode,
+          createdAt,
+          updatedAt,
+        ]
+
+    Family:
+      type: object
+      properties:
+        id: { type: integer, example: 8 }
+        propertyId: { type: integer, example: 10 }
+        familyName: { type: string, example: Santos Family }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, propertyId, familyName, createdAt, updatedAt]
+
+    Tenant:
+      type: object
+      properties:
+        id: { type: integer, example: 101 }
+        familyId: { type: integer, example: 8 }
+        fullName: { type: string, example: Elena Santos }
+        email: { type: string, format: email, nullable: true }
+        phone: { type: string, nullable: true }
+        dateOfBirth: { type: string, format: date-time, nullable: true }
+        moveInDate: { type: string, format: date-time, nullable: true }
+        moveOutDate: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, familyId, fullName, createdAt, updatedAt]
+
+    PropertyNote:
+      type: object
+      properties:
+        id: { type: integer, example: 300 }
+        agentId: { type: integer, example: 1 }
+        propertyId: { type: integer, example: 10 }
+        title: { type: string, example: Quarterly pest control }
+        category: { type: string, example: pest-control }
+        body:
+          { type: string, example: Coordinate vendor visit and tenant notice. }
+        status:
+          $ref: "#/components/schemas/NoteStatus"
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [
+          id,
+          agentId,
+          propertyId,
+          title,
+          category,
+          body,
+          status,
+          createdAt,
+          updatedAt,
+        ]
+
+    PropertyReminder:
+      type: object
+      properties:
+        id: { type: integer, example: 400 }
+        agentId: { type: integer, example: 1 }
+        propertyId: { type: integer, example: 10 }
+        title: { type: string, example: HVAC maintenance visit }
+        category: { type: string, example: maintenance }
+        description:
+          { type: string, example: Inspect vents and replace filters. }
+        dueDate: { type: string, format: date-time }
+        status:
+          $ref: "#/components/schemas/ReminderStatus"
+        completedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [
+          id,
+          agentId,
+          propertyId,
+          title,
+          category,
+          description,
+          dueDate,
+          status,
+          createdAt,
+          updatedAt,
+        ]
+
+    PropertyDetail:
+      allOf:
+        - $ref: "#/components/schemas/Property"
+        - type: object
+          properties:
+            agent:
+              $ref: "#/components/schemas/Agent"
+            family:
+              nullable: true
+              allOf:
+                - $ref: "#/components/schemas/Family"
+                - type: object
+                  properties:
+                    tenants:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/Tenant"
+            notes:
+              type: array
+              items:
+                $ref: "#/components/schemas/PropertyNote"
+            reminders:
+              type: array
+              items:
+                $ref: "#/components/schemas/PropertyReminder"
+          required: [agent, notes, reminders]
+
+    AgentDetail:
+      allOf:
+        - $ref: "#/components/schemas/Agent"
+        - type: object
+          properties:
+            properties:
+              type: array
+              items:
+                $ref: "#/components/schemas/PropertyDetail"
+          required: [properties]
+
+    CreateAgentRequest:
+      type: object
+      properties:
+        firstName: { type: string, minLength: 1 }
+        lastName: { type: string, minLength: 1 }
+        email: { type: string, format: email }
+        mobileNumber: { type: string, minLength: 3 }
+      required: [firstName, lastName, email]
+
+    CreatePropertyRequest:
+      type: object
+      properties:
+        agentId: { type: integer, minimum: 1 }
+        label: { type: string, minLength: 1 }
+        addressLine: { type: string, minLength: 1 }
+        city: { type: string, minLength: 1 }
+        state: { type: string, minLength: 1 }
+        postalCode: { type: string, minLength: 1 }
+      required: [agentId, label, addressLine, city, state, postalCode]
+
+    CreateFamilyRequest:
+      type: object
+      properties:
+        familyName: { type: string, minLength: 1 }
+      required: [familyName]
+
+    CreateTenantRequest:
+      type: object
+      properties:
+        fullName: { type: string, minLength: 1 }
+        email: { type: string, format: email }
+        phone: { type: string, minLength: 3 }
+        dateOfBirth: { type: string, format: date-time }
+        moveInDate: { type: string, format: date-time }
+        moveOutDate: { type: string, format: date-time }
+      required: [fullName]
+
+    CreateNoteRequest:
+      type: object
+      properties:
+        agentId: { type: integer, minimum: 1 }
+        title: { type: string, minLength: 1 }
+        category: { type: string, minLength: 1 }
+        body: { type: string, minLength: 1 }
+      required: [agentId, title, category, body]
+
+    CreateReminderRequest:
+      type: object
+      properties:
+        agentId: { type: integer, minimum: 1 }
+        title: { type: string, minLength: 1 }
+        category: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        dueDate: { type: string, format: date-time }
+      required: [agentId, title, category, description, dueDate]
+
+    UpdateReminderStatusRequest:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/ReminderStatus"
+      required: [status]
+
+    UpdateNoteStatusRequest:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/NoteStatus"
+      required: [status]
