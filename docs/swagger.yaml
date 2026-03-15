@@ -31,30 +31,6 @@ security:
   - bearerAuth: []
 
 paths:
-  /auth/register:
-    post:
-      security: []
-      tags: [Auth]
-      summary: Register a user
-      description: Creates a new auth user and returns a JWT token.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RegisterRequest"
-      responses:
-        "201":
-          description: Registration successful
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "409":
-          $ref: "#/components/responses/ConflictError"
-
   /auth/login:
     post:
       security: []
@@ -524,14 +500,6 @@ components:
         user:
           $ref: "#/components/schemas/AuthUser"
       required: [token, user]
-
-    RegisterRequest:
-      type: object
-      properties:
-        fullName: { type: string, minLength: 1 }
-        email: { type: string, format: email }
-        password: { type: string, minLength: 8 }
-      required: [fullName, email, password]
 
     LoginRequest:
       type: object

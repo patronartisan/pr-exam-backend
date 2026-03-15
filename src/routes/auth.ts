@@ -23,53 +23,9 @@ type PublicAuthUser = {
   email: string;
 };
 
-const registerSchema = z.object({
-  fullName: z.string().min(1),
-  email: z.string().email(),
-  password: z.string().min(8),
-});
-
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-});
-
-authRouter.post('/register', async (request, response, next) => {
-  try {
-    const payload = registerSchema.parse(request.body);
-
-    const existingUser = await db.authUser.findUnique({
-      where: { email: payload.email },
-    });
-
-    if (existingUser) {
-      throw new ApiError(409, 'User already exists');
-    }
-
-    const passwordHash = await bcrypt.hash(payload.password, 10);
-
-    const user = (await db.authUser.create({
-      data: {
-        fullName: payload.fullName,
-        email: payload.email,
-        passwordHash,
-      },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-      },
-    })) as PublicAuthUser;
-
-    const token = signAuthToken({
-      userId: user.id,
-      email: user.email,
-    });
-
-    response.status(201).json({ token, user });
-  } catch (error) {
-    next(error);
-  }
 });
 
 authRouter.post('/login', async (request, response, next) => {
