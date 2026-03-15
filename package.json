@@ -1,5 +1,6 @@
 {
     "name": "pr-exam-backend",
+    "description": "PURE Home River Exam Backend",
     "version": "1.0.0",
     "private": true,
     "type": "module",
