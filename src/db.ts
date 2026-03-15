@@ -44,7 +44,9 @@ type FamilyRecord = {
 type TenantRecord = {
 	id: number;
 	familyId: number;
-	fullName: string;
+	// fullName: string;
+	firstName: string;
+	lastName: string;
 	email: string | null;
 	phone: string | null;
 	dateOfBirth: Date | null;
@@ -134,7 +136,9 @@ const tenants: TenantRecord[] = [
 	{
 		id: 1,
 		familyId: 1,
-		fullName: 'Elena Santos',
+		// fullName: 'Elena Santos',
+		firstName: 'Elena',
+		lastName: 'Santos',
 		email: 'elena@example.com',
 		phone: null,
 		dateOfBirth: null,
@@ -146,7 +150,9 @@ const tenants: TenantRecord[] = [
 	{
 		id: 2,
 		familyId: 1,
-		fullName: 'Marco Santos',
+		// fullName: 'Marco Santos',
+		firstName: 'Marco',
+		lastName: 'Santos',
 		email: 'marco@example.com',
 		phone: null,
 		dateOfBirth: null,
@@ -456,6 +462,19 @@ export const db = {
 			families.push(family);
 			return clone(family);
 		},
+
+		delete: async ({ where }: { where: { propertyId: number; familyId: number } }) => {
+			const familyIndex = families.findIndex((item) => item.id === where.familyId);
+			const family = clone(families[familyIndex] as FamilyRecord);
+			if (familyIndex < 0) {
+				throw new Error('Family not found');
+			}
+
+			removeWhere(tenants, (tenant) => tenant.familyId === where.familyId);
+			families.splice(familyIndex, 1);
+			
+			return family;
+		},
 	},
 
 	tenant: {
@@ -464,7 +483,9 @@ export const db = {
 		}: {
 			data: {
 				familyId: number;
-				fullName: string;
+				// fullName: string;
+				firstName: string;
+				lastName: string;
 				email?: string;
 				phone?: string;
 				dateOfBirth?: Date;
@@ -476,7 +497,9 @@ export const db = {
 			const tenant: TenantRecord = {
 				id: counters.tenant++,
 				familyId: data.familyId,
-				fullName: data.fullName,
+				// fullName: data.fullName,
+				firstName: data.firstName,
+				lastName: data.lastName,
 				email: data.email ?? null,
 				phone: data.phone ?? null,
 				dateOfBirth: data.dateOfBirth ?? null,
@@ -486,6 +509,18 @@ export const db = {
 				updatedAt: createdAt,
 			};
 			tenants.push(tenant);
+			return clone(tenant);
+		},
+
+
+		update: async ({ where }: { where: { id: number } }) => {
+			const tenantIndex = tenants.findIndex((item) => item.id === where.id);
+			if (tenantIndex < 0) {
+				throw new Error('Tenant not found');
+			}
+			const tenant = tenants[tenantIndex];
+			tenant.moveOutDate = now();
+			tenant.updatedAt = now();
 			return clone(tenant);
 		},
 	},

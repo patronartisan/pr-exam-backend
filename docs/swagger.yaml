@@ -598,7 +598,9 @@ components:
       properties:
         id: { type: integer, example: 101 }
         familyId: { type: integer, example: 8 }
-        fullName: { type: string, example: Elena Santos }
+        # fullName: { type: string, example: Elena Santos }
+        firstName: { type: string, example: Elena }
+        lastName: { type: string, example: Santos }
         email: { type: string, format: email, nullable: true }
         phone: { type: string, nullable: true }
         dateOfBirth: { type: string, format: date-time, nullable: true }
@@ -606,7 +608,7 @@ components:
         moveOutDate: { type: string, format: date-time, nullable: true }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, familyId, fullName, createdAt, updatedAt]
+      required: [id, familyId, firstName, lastName, createdAt, updatedAt]
 
     PropertyNote:
       type: object
@@ -732,13 +734,15 @@ components:
     CreateTenantRequest:
       type: object
       properties:
-        fullName: { type: string, minLength: 1 }
+        # fullName: { type: string, minLength: 1 }
+        firstName: { type: string, minLength: 1 }
+        lastName: { type: string, minLength: 1 }
         email: { type: string, format: email }
         phone: { type: string, minLength: 3 }
         dateOfBirth: { type: string, format: date-time }
         moveInDate: { type: string, format: date-time }
         moveOutDate: { type: string, format: date-time }
-      required: [fullName]
+      required: [firstName, lastName]
 
     CreateNoteRequest:
       type: object
