@@ -271,6 +271,28 @@ paths:
         "404":
           $ref: "#/components/responses/FamilyNotFound"
 
+  /api/properties/{propertyId}/family/{familyId}:
+    delete:
+      tags: [Properties]
+      summary: Remove family from property
+      description: Deletes the household record. Fails if the property does not have a family.
+      parameters:
+        - $ref: "#/components/parameters/PropertyId"
+        - $ref: "#/components/parameters/FamilyId"
+      responses:
+        "204":
+          description: Family removed
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/PropertyNotFound"
+        "409":
+          description: Property does not have a family assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+
   /api/properties/{propertyId}/notes:
     post:
       tags: [Notes]

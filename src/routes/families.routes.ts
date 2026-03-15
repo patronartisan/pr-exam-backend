@@ -34,6 +34,10 @@ apiRouter.post(
       throw new ApiError(404, 'Family not found');
     }
 
+    if(family.familyName.toLowerCase() !== payload.lastName.toLowerCase()) {
+      throw new ApiError(404, 'Family name does not match');
+    }
+
     const tenant = await db.tenant.create({
       data: {
         familyId,
