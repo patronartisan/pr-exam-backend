@@ -101,7 +101,7 @@ const agents: AgentRecord[] = [
 		id: 1,
 		firstName: 'Property',
 		lastName: 'Agent',
-		email: 'property.agent@example.com',
+		email: 'admin@pureagent.local',
 		mobileNumber: '+1-555-0100',
 		createdAt: initialCreatedAt,
 		updatedAt: initialCreatedAt,
@@ -347,8 +347,8 @@ export const db = {
 			return clone(agent);
 		},
 
-		findUnique: async ({ where, include }: { where: { id: number }; include?: unknown }) => {
-			const agent = agents.find((item) => item.id === where.id);
+		findUnique: async ({ where, include }: { where: { id?: number; email?: string }; include?: unknown }) => {
+			const agent = agents.find((item) => (where.id !== undefined && item.id === where.id) || (where.email !== undefined && item.email === where.email));
 			if (!agent) {
 				return null;
 			}

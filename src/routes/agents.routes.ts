@@ -41,6 +41,11 @@ apiRouter.post(
   asyncRoute(async (request, response) => {
     const payload = request.body;
 
+    const findAgent = await db.agent.findUnique({ where: { email: payload.email } });
+    if (findAgent) {
+      throw new ApiError(400, 'Agent with this email already exists');
+    }
+
     const agent = await db.agent.create({
       data: payload,
     });
@@ -57,6 +62,11 @@ apiRouter.delete(
     const agent = await db.agent.findUnique({ where: { id: agentId } });
     if (!agent) {
       throw new ApiError(404, 'Agent not found');
+    }
+
+    const authUser = await db.authUser.findUnique({ where: { email: agent.email } });
+    if (authUser) {
+      throw new ApiError(400, 'Cannot delete agent with associated auth user');
     }
 
     await db.agent.delete({ where: { id: agentId } });
